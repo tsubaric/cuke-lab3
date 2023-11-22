@@ -1,3 +1,4 @@
+from pathlib import Path
 from core.ast2ir import *
 from core import helpers
 from ext.set import *
@@ -92,8 +93,14 @@ def gen_cpp(ast):
         code += f'return obj_{ast.eval.name()};\n'
     else:
         raise TypeError('wrong output type')
-
-    with open('codegen/cpp_template.cpp', 'r') as f:
+    
+    file_path = Path('./codegen/cpp_template.cpp')
+    with open(file_path, 'r') as f:
         c_code = f.read()
         c_code = c_code.replace('RTYPE', rtype).replace('FNAME', ast.name).replace('ARGS', args).replace('CODE', code)
     return c_code
+
+    # with open('codegen/cpp_template.cpp', 'r') as f:
+    #     c_code = f.read()
+    #     c_code = c_code.replace('RTYPE', rtype).replace('FNAME', ast.name).replace('ARGS', args).replace('CODE', code)
+    # return c_code

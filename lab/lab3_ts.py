@@ -99,24 +99,61 @@ def get_rhs(node):
 def fuse(ast_wit_ir):
     elementwise_op = op_mapping
     node = ast_wit_ir
-    def action(node, res):
+    
+    def find_fusable_pairs(node, res):
         if type(node) == TensorOp and node.op_type in elementwise_op:
-            if type(node.operators[0]) == TensorOp and node.operators[0].op_type in elementwise_op:      
-                print("Find fusable pairs! Left")
-                #Do something here
-                x = 0
-            if type(node.operators[1]) == TensorOp and node.operators[1].op_type in elementwise_op:
-                print("Find fusable pairs! Right")
-                #Do something here
-                x = 0
-            if type(node.operators[0]) == TensorOp and node.operators[0].op_type == 'einsum':
-                #Do something here
-                x = 0
-            if type(node.operators[1]) == TensorOp and node.operators[1].op_type == 'einsum':
-                #Do something here
-                x = 0
-           
-    t = helpers.Traversal(action)
+            if len(node.operators) >= 2:
+                print(f"Type of operators[0]: {type(node.operators[0])}, Length: {len(node.operators)}")
+                if type(node.operators[0]) == TensorOp and node.operators[0].op_type in elementwise_op:      
+                    print("Find fusable pairs! Left")
+                    fuse_tensor_ops(node, node.operators[0])
+                    
+                print(f"Type of operators[1]: {type(node.operators[1])}, Length: {len(node.operators)}")
+                if type(node.operators[1]) == TensorOp and node.operators[1].op_type in elementwise_op:
+                    print("Find fusable pairs! Right")
+                    fuse_tensor_ops(node, node.operators[1])
+
+    def fuse_tensor_ops(parent_node, child_node):
+        level = fusable_level(parent_node, child_node)
+        if level > 0:
+            print(f"Fusing at level {level}")
+
+            # Make sure child_node.compute has elements before accessing it
+            if child_node.compute and len(child_node.compute) >= 2:
+                rhs = get_rhs(child_node)
+
+                # Make sure parent_node.compute has elements before accessing it
+                if parent_node.compute and len(parent_node.compute) >= 2:
+                    # Replace indices in the child_node's RHS with the corresponding indices in the parent_node
+                    replace_index_with_scalar(rhs, child_node.compute[1], parent_node.compute[1])
+
+                # Move the body of the child_node into the body of the parent_node at the fusable level
+                move_ir(child_node, parent_node, level)
+
+                # Update the size information of the parent_node
+                parent_node.fix_size.extend(child_node.fix_size)
+                parent_node.ref_size.extend(child_node.ref_size)
+
+                # Make sure parent_node.compute has elements before accessing it
+                if parent_node.compute:
+                    # Update the compute information of the parent_node
+                    parent_node.compute = parent_node.compute + child_node.compute[1:]
+
+                # Additional logic: You can perform further optimization or cleanup here
+                # For example, removing the child_node from the parent_node's decl list
+
+                # Remove the child_node from the parent_node's decl list
+                parent_node.decl.remove(child_node)
+
+                # Ensure that the parent_node's dtype is updated if needed
+                parent_node.dtype = child_node.dtype
+
+                print(f"Parent Node Compute Length: {len(parent_node.compute)}")
+                print(f"Child Node Compute Length: {len(child_node.compute)}")
+                print(f"Parent Node: {parent_node}")
+                print(f"Child Node: {child_node}")
+
+    t = helpers.Traversal(find_fusable_pairs)
     t(node)
     return node
 
@@ -124,31 +161,19 @@ def test1():
     A = Tensor('a', (30, 30))
     B = Tensor('b', (30, 30))
     C = Tensor('c', (30, 30))
+    D = Tensor('d', (30, 30))
+    E = Tensor('e', (30, 30))
 
     res1 = A + B 
-    res2 = + C
-    res = res1 + res2
+    res2 = C + D
+    res = res1 + res2 + E
     res_with_ir = gen_ir(res)
     code = codegen.cpu.gen_cpp(res_with_ir)
     print(code)
-    # new_res_with_ir = fuse(res_with_ir)
-    # print(new_res_with_ir)
+    new_res_with_ir = fuse(res_with_ir)
+    print(new_res_with_ir)
 
 def test2():
-    A = Tensor('a', (10, 20))
-    B = Tensor('b', (20, 30))
-    C = Tensor('c', (10, 30))
-
-    res1 = A @ B 
-    res2 = + C
-    res = res1 + res2
-    res_with_ir = gen_ir(res)
-    code = codegen.cpu.gen_cpp(res_with_ir)
-    print(code)
-    # new_res_with_ir = fuse(res_with_ir)
-    # print(new_res_with_ir)
-
-def test3():
     A = Tensor('a', (30, 30))
     B = Tensor('b', (30, 30))
     C = Tensor('c', (30, 30))
@@ -157,20 +182,8 @@ def test3():
     res_with_ir = gen_ir(res)
     code = codegen.cpu.gen_cpp(res_with_ir)
     print(code)
-    # new_res_with_ir = fuse(res_with_ir)
-    # print(new_res_with_ir)
-
-def test4():
-    A = Tensor('a', (10, 20))
-    B = Tensor('b', (20, 30))
-    C = Tensor('c', (10, 30))
-
-    res = A @ B + C
-    res_with_ir = gen_ir(res)
-    code = codegen.cpu.gen_cpp(res_with_ir)
-    print(code)
-    # new_res_with_ir = fuse(res_with_ir)
-    # print(new_res_with_ir)
+    new_res_with_ir = fuse(res_with_ir)
+    print(new_res_with_ir)
 
 if __name__ == "__main__":
-    test3()
+    test1()
