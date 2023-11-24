@@ -101,17 +101,19 @@ def fuse(ast_wit_ir):
     node = ast_wit_ir
     
     def find_fusable_pairs(node, res):
-        if type(node) == TensorOp and node.op_type in elementwise_op:
-            if len(node.operators) >= 2:
-                print(f"Type of operators[0]: {type(node.operators[0])}, Length: {len(node.operators)}")
-                if type(node.operators[0]) == TensorOp and node.operators[0].op_type in elementwise_op:      
-                    print("Find fusable pairs! Left")
-                    fuse_tensor_ops(node, node.operators[0])
-                    
-                print(f"Type of operators[1]: {type(node.operators[1])}, Length: {len(node.operators)}")
-                if type(node.operators[1]) == TensorOp and node.operators[1].op_type in elementwise_op:
-                    print("Find fusable pairs! Right")
-                    fuse_tensor_ops(node, node.operators[1])
+        if type(node) == Assignment and isinstance(node.rhs, TensorOp) and node.rhs.op_type in elementwise_op:
+            # Check if the RHS is a TensorOp and its op_type is in elementwise_op
+            if len(node.rhs.operators) == 2:
+                # Check if there are exactly two operators
+                op0, op1 = node.rhs.operators
+
+                if isinstance(op0, TensorOp) and op0.op_type in elementwise_op and fusable_level(node, op0) > 0:
+                    print("Found fusable pairs! Left")
+                    fuse_tensor_ops(node, op0)
+
+                if isinstance(op1, TensorOp) and op1.op_type in elementwise_op and fusable_level(node, op1) > 0:
+                    print("Found fusable pairs! Right")
+                    fuse_tensor_ops(node, op1)
 
     def fuse_tensor_ops(parent_node, child_node):
         level = fusable_level(parent_node, child_node)
@@ -139,9 +141,6 @@ def fuse(ast_wit_ir):
                     # Update the compute information of the parent_node
                     parent_node.compute = parent_node.compute + child_node.compute[1:]
 
-                # Additional logic: You can perform further optimization or cleanup here
-                # For example, removing the child_node from the parent_node's decl list
-
                 # Remove the child_node from the parent_node's decl list
                 parent_node.decl.remove(child_node)
 
@@ -167,6 +166,7 @@ def test1():
     res1 = A + B 
     res2 = C + D
     res = res1 + res2 + E
+
     res_with_ir = gen_ir(res)
     code = codegen.cpu.gen_cpp(res_with_ir)
     print(code)
@@ -178,12 +178,16 @@ def test2():
     B = Tensor('b', (30, 30))
     C = Tensor('c', (30, 30))
 
-    res = A + B + C
+    res1 = A + B
+    inter = res1 + C  # Use an intermediate variable
+    res = res1 + inter
+
     res_with_ir = gen_ir(res)
     code = codegen.cpu.gen_cpp(res_with_ir)
-    print(code)
+    #print(code)
     new_res_with_ir = fuse(res_with_ir)
     print(new_res_with_ir)
 
+
 if __name__ == "__main__":
-    test1()
+    test2()

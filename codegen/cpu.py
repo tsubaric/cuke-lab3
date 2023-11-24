@@ -94,13 +94,13 @@ def gen_cpp(ast):
     else:
         raise TypeError('wrong output type')
     
-    file_path = Path('./codegen/cpp_template.cpp')
-    with open(file_path, 'r') as f:
-        c_code = f.read()
-        c_code = c_code.replace('RTYPE', rtype).replace('FNAME', ast.name).replace('ARGS', args).replace('CODE', code)
-    return c_code
-
-    # with open('codegen/cpp_template.cpp', 'r') as f:
+    # file_path = Path('./codegen/cpp_template.cpp')
+    # with open(file_path, 'r') as f:
     #     c_code = f.read()
     #     c_code = c_code.replace('RTYPE', rtype).replace('FNAME', ast.name).replace('ARGS', args).replace('CODE', code)
     # return c_code
+
+    with open('codegen/cpp_template.cpp', 'r') as f:
+        c_code = f.read()
+        c_code = c_code.replace('RTYPE', rtype).replace('FNAME', ast.name).replace('ARGS', args).replace('CODE', code)
+    return c_code
