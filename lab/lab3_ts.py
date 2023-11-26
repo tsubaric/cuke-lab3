@@ -547,7 +547,7 @@ def test2():
     D = Tensor('d', (30, 30))
 
     res1 = A * B # 20, 40
-    res2 = C * D # 20, 40
+    res2 = C + D # 20, 40
     res = res1 + res2
     res_with_ir = gen_ir(res)
     code0 = codegen.cpu.gen_cpp(res_with_ir)
