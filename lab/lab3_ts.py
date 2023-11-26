@@ -320,33 +320,13 @@ def move_ir_1(tensor_op1, tensor_op2, position, parent_op, child_op):
     temp = to_string(body_of_child[0])
     temp_ops = re.findall(r'[\+\-\*/]', temp)
 
-    # print("\n===> loop_iterate_of_parent in reverse")
     loop_iterate_of_parent = get_loop_iterate(tensor_op2.compute[0], [])
-    # PrintCCode(loop_iterate_of_parent)
-
-    # print("\n===> loop_iterate_of_child in reverse")
     loop_iterate_of_child = get_loop_iterate(tensor_op1.compute[0], [])
-    # PrintCCode(loop_iterate_of_child)
-
-    # print("\n===> Required index_list of parent")
     index_list_p = get_body_Indices(body_of_parent)
-    # PrintCCode(index_list_p[0])
-
-    # print("\n===> Required index_list of child")
     index_list = get_body_Indices(body_of_child)
-    # PrintCCode(index_list[0])
-
-    # print("\n===> indices_index of child")
     indices_index = get_index_of_all_indices(index_list)
-    
-
-    # print("\n===> Chlid Level Info")
     levels_info = get_index_loop_level(loop_iterate_of_child, indices_index)
-    # print(levels_info)
-
-    # print("\n===> Replacement")
     updated_index = updated_assignment(index_list[0],loop_iterate_of_parent, levels_info[0])
-    # PrintCCode(updated_index)
     replace_this = updated_index[0]
     replacement = updated_index[1]
     
@@ -354,10 +334,7 @@ def move_ir_1(tensor_op1, tensor_op2, position, parent_op, child_op):
         replacement = replacement = Expr(replacement, updated_index[i], temp_ops.pop(0))
 
     tensor_op1.compute = []
-    # print("\n===> Updated Assignment of Parent")
-    # print("==========> Position: ", position)
     new_body_of_2 = new_body_a(index_list_p[0], body_of_parent,replacement, parent_op, child_op, replace_this)
-    # print(to_string(new_body_of_2))
     
     tensor_op2 = update_body_a(tensor_op2, new_body_of_2)
     
@@ -469,65 +446,6 @@ def post_order_traversal(root):
 def fuse(ast_wit_ir):
     elementwise_op = op_mapping
     node = ast_wit_ir
-
-    # .operators[]                           ====> Left / Right child (TensorOp or Tensor)
-    # [node.operators[0].operators[1].eval]  ====> result 
-    # node.operators[0].operators[1].decl    ====> result declaration
-    # node.operators[0].operators[1].compute ====> loops and body (IR) list
-
-    # print("===============================================================> Helpers Functions Testing")
-    # print("==============================================> Get Loop iterate")
-    # print(to_string(node.compute[0]))
-    # loop_iterate_list = get_loop_iterate(node.compute[0], [])
-    # loop_iterate_list.reverse()
-    # PrintCCode(loop_iterate_list)
-    
-    # print("==============================================> Loop body")
-    # body = FindBody(node.compute[0]) # returns a list with number of instructions i.e arr14[_l6][_l7] = arr10[_l6][_l7] + e[_l6][_l7];
-    # print("Body: ", to_string(body[0]))
-    # print("LHS: ", type(body[0].lhs))
-    # print("RHS: ", type(body[0].rhs))
-
-    # print("==============================================> Get Body Indices obj")
-    # #arr14[_l6][_l7]arr10[_l6][_l7]e[_l6][_l7]
-    # index_list = get_body_Indices(body)
-    # PrintCCode(index_list[0])
-
-    # print("==============================================> Get name of all Indices obj")
-    # names = get_name_of_all_indices(index_list)
-    # PrintCCode(names[0])
-
-    # print("==============================================> Get Indices index")
-    # #[[[_l7,_l6], [_l7,_l6], [_l7,_l6]], [], ....] 
-    # indices_index = get_index_of_all_indices(index_list)
-    # # =========> Just for printing
-    # for i in range(0, len(indices_index)):
-    #     line = indices_index[i]
-    #     for j in range(0,len(line)):
-    #         one_obj = line[j]
-    #         for k in range(0, len(one_obj)):
-    #             print(to_string(one_obj[k]))
-
-    # print("==============================================> Get Indices vs loop level")
-    # levels_info = get_index_loop_level(loop_iterate_list, indices_index)
-    # print(levels_info)
-
-    # print("==============================================> Get operation")
-    # print("Operation:", get_operation(node.compute))
-
-    # print("==============================================> Count number of Loops")
-    # print("Loop count:", count_loops(node.compute[0], 0))
-
-    # print("==============================================> Get Lower/Upper bound of Loops")
-    # print("Loop bounds:", get_bounds(node.compute[0], [], [], []))
-
-    # print("==============================================> move IR without checks")
-    # PrintCCode(node.operators[0].compute)
-    # PrintCCode(node.operators[1].compute)
-    # new_1, new_2 = move_ir_2(node.operators[0], node.operators[1])
-    # print("===> After Moving")
-    # PrintCCode(new_1.compute)
-    # PrintCCode(new_2.compute)
 
     print("==============================================> Post Order Traversal")
     node = post_order_traversal(node)
@@ -674,4 +592,4 @@ def test22():
     PrintCCode(new_res_with_ir.compute)
 
 if __name__ == "__main__":
-    test11()
+    test22()
