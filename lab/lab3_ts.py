@@ -546,8 +546,8 @@ def test2():
     C = Tensor('c', (30, 30))
     D = Tensor('d', (30, 30))
 
-    res1 = A * B # 20, 40
-    res2 = C + D # 20, 40
+    res1 = A * B 
+    res2 = C + D 
     res = res1 + res2
     res_with_ir = gen_ir(res)
     code0 = codegen.cpu.gen_cpp(res_with_ir)
@@ -572,8 +572,8 @@ def test22():
     C = Tensor('c', (20, 40))
     D = Tensor('d', (40, 40))
 
-    res1 = A + B
-    res2 = C + D
+    res1 = A + B # 20, 40
+    res2 = C + D # 20, 40
     res = res1 + res2
     res_with_ir = gen_ir(res)
     code0 = codegen.cpu.gen_cpp(res_with_ir)
