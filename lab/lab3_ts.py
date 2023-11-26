@@ -351,7 +351,7 @@ def post_order_traversal(root):
             parent_op = get_operation(root.compute)
             child_op = get_operation(root.operators[0].compute)
             
-            if child_op == '+' or child_op == '-' or child_op == '@' or child_op == '/':
+            if child_op == '+' or child_op == '-' or child_op == '*' or child_op == '/':
                 parent_bounds = get_bounds(root.compute[0], [], [], [])
                 child_bounds = get_bounds(root.operators[0].compute[0], [], [], [])
                 #==================================> For equal bounds
@@ -397,7 +397,7 @@ def post_order_traversal(root):
             parent_op = get_operation(root.compute)
             child_op = get_operation(root.operators[1].compute)
             
-            if child_op == '+' or child_op == '-' or child_op == '@' or child_op == '/':
+            if child_op == '+' or child_op == '-' or child_op == '*' or child_op == '/':
                 parent_bounds = get_bounds(root.compute[0], [], [], [])
                 child_bounds = get_bounds(root.operators[1].compute[0], [], [], [])
                 #==================================> For equal bounds
@@ -546,8 +546,8 @@ def test2():
     C = Tensor('c', (30, 30))
     D = Tensor('d', (30, 30))
 
-    res1 = A @ B # 20, 40
-    res2 = C @ D # 20, 40
+    res1 = A * B # 20, 40
+    res2 = C * D # 20, 40
     res = res1 + res2
     res_with_ir = gen_ir(res)
     code0 = codegen.cpu.gen_cpp(res_with_ir)
@@ -567,12 +567,12 @@ def test2():
 
 ############################################### Simple [*]
 def test22():
-    A = Tensor('a', (30, 30))
-    B = Tensor('b', (30, 30))
-    C = Tensor('c', (30, 30))
-    D = Tensor('d', (30, 30))
+    A = Tensor('a', (20, 30))
+    B = Tensor('b', (30, 40))
+    C = Tensor('c', (20, 40))
+    D = Tensor('d', (40, 40))
 
-    res1 = A @ B
+    res1 = A + B
     res2 = C + D
     res = res1 + res2
     res_with_ir = gen_ir(res)
@@ -592,4 +592,4 @@ def test22():
     PrintCCode(new_res_with_ir.compute)
 
 if __name__ == "__main__":
-    test22()
+    test2()
