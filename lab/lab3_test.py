@@ -18,8 +18,12 @@ def PrintCCode(ir):
         code += to_string(d)
     print(code)
 
-#==========================================================================================================>
-#==========================================================================================================>
+#====================================================================> PrintCGroupCode
+def PrintCGroupCode(index_groups):
+    for name, expressions in index_groups.items():
+        for expr in expressions:
+            print(to_string(expr))
+
 #==========================================================================================================> My Helper functions
 #====================================================================> FindBody
 def FindBody(nested_loop):
@@ -88,7 +92,7 @@ def get_body_Indices_helper(line_index_list):
             return True
     return False
 
-#====================================================================> get_body_Indices [[arr14[_l6][_l7], arr10[_l6][_l7],...], [] ] ???????????? hard code
+#====================================================================> get_body_Indices [[arr14[_l6][_l7], arr10[_l6][_l7],...], [] ]
 def get_body_Indices(loop_body):
     ind_list = []
     for i in range(0,len(loop_body)):
@@ -179,47 +183,7 @@ def get_index_loop_level(loop_iterate_list, indices_index):
         result_list.append(line_list)
     return result_list
 
-#===================================================================>> not all loop equal
-#====================================================================> new_body
-def new_body_b(nested_loop, body_to_add):
-    if not type(nested_loop) == Loop:
-        nested_loop = body_to_add + nested_loop
-        return nested_loop
-    if type(nested_loop.body[0]) == Loop:
-        return new_body_b(nested_loop.body[0], body_to_add)
-    else:
-        ret = body_to_add + nested_loop.body
-        return ret
-
-#====================================================================> update_body ???????????? hard code
-def update_body_b(nested_loop, new_body):
-    loop_count = count_loops(nested_loop.compute[0], 0)
-
-    if loop_count == 0:
-        return
-    if loop_count == 1:
-        nested_loop.compute[0].body = new_body
-    if loop_count == 2:
-        nested_loop.compute[0].body[0].body = new_body
-    if loop_count == 3:
-        nested_loop.compute[0].body[0].body[0].body = new_body
-    if loop_count == 4:
-        nested_loop.compute[0].body[0].body[0].body[0].body = new_body
-    if loop_count == 5:
-        nested_loop.compute[0].body[0].body[0].body[0].body[0].body = new_body
-
-    return nested_loop
-#====================================================================> Move IR (from 1 -> 2) 1 will be child (for complete code transfer) edit this
-def move_ir_2(tensor_op1, tensor_op2):
-    body_of_1 = FindBody(tensor_op1.compute[0])
-    tensor_op1.compute = []
-    new_body_of_2 = body_of_1
-    new_body_of_2 = new_body_b(tensor_op2.compute[0], body_of_1)
-    
-    tensor_op2 = update_body_b(tensor_op2, new_body_of_2)
-    return (tensor_op1, tensor_op2)
-
-#===============================================================================>> all loop equal
+#========================================================================================================================================>> all loop equal
 #====================================================================> get_ops_order
 def get_ops_order(body_of_parent, replacement, kkk):
     line_p = to_string(body_of_parent[0])
@@ -243,10 +207,12 @@ def get_ops_order(body_of_parent, replacement, kkk):
                 ops_seq.append(operators_c.pop(0))
                 pushed = pushed+1
                 iter = iter + 1
+        
         else:
             ops_seq.append(operators_p.pop(0))
             pushed = pushed+1
             iter = iter + 1
+
     # print("---------> ops:",ops_seq)
     return ops_seq
 #====================================================================> new_body_a 
@@ -270,6 +236,7 @@ def new_body_a(body_parts_of_parent, body_of_parent,replacement, parent_op, chil
     for jj in range(0, pop_time):
         ops_seq.pop(kkk-1)
 
+    # print("============================>>>>>")
     right_side = body_parts_of_parent[1]
     for j in range(2, len(body_parts_of_parent)):
         oper = ops_seq.pop(0)
@@ -278,9 +245,10 @@ def new_body_a(body_parts_of_parent, body_of_parent,replacement, parent_op, chil
     new_ass = Assignment(left_side,right_side)
     return new_ass
 
-#====================================================================> update_body 
+#====================================================================> update_body ???????????? hard code
 def update_body_a(nested_loop, new_body):
     loop_count = count_loops(nested_loop.compute[0], 0)
+
     if loop_count == 0:
         return
     if loop_count == 1:
@@ -293,6 +261,9 @@ def update_body_a(nested_loop, new_body):
         nested_loop.compute[0].body[0].body[0].body[0].body = [new_body]
     if loop_count == 5:
         nested_loop.compute[0].body[0].body[0].body[0].body[0].body = [new_body]
+    if loop_count == 6:
+        nested_loop.compute[0].body[0].body[0].body[0].body[0].body[0].body = [new_body]
+
     return nested_loop
 
 #====================================================================> a[_l0][_l1]b[_l0][_l1] -> a[_l4][_l5]b[_l4][_l5]
@@ -300,7 +271,7 @@ def updated_assignment(index_list,loop_iterate_of_parent,levels_info):
     ret_index_list = []
     for i  in range(0, len(index_list)):
         ind = index_list[i]
-
+        
         def recursive_index_update(ind, loop_iterate_of_parent, levels_info):
             # print(levels_info)
             if len(levels_info) == 0:
@@ -353,7 +324,7 @@ def move_ir_1(tensor_op1, tensor_op2, position, parent_op, child_op):
     replacement = updated_index[1]
     
     for i in range(2, len(updated_index)):
-        replacement = replacement = Expr(replacement, updated_index[i], temp_ops.pop(0))
+        replacement = Expr(replacement, updated_index[i], temp_ops.pop(0))
 
     tensor_op1.compute = []
     # print("\n===> Updated Assignment of Parent")
@@ -361,27 +332,75 @@ def move_ir_1(tensor_op1, tensor_op2, position, parent_op, child_op):
     new_body_of_2 = new_body_a(index_list_p[0], body_of_parent,replacement, parent_op, child_op, replace_this)
     # print(to_string(new_body_of_2))
     
+    # print("=============================> Here")
     tensor_op2 = update_body_a(tensor_op2, new_body_of_2)
     
     return (tensor_op1, tensor_op2)
 
-#====================================================================> 
+#================================================================================================================================================>
+#=========================================================== Functions for @ case ===============================================================>
+#================================================================================================================================================>
+#====================================================> update_child_body
+def update_child_body(child_body, to_insert, position):
+    if position == 0:
+        child_body.append(to_insert[0])
+        return
+    
+    if type(child_body) == Loop:
+        update_child_body(child_body.body, to_insert, position-1)
+    else:
+        update_child_body(child_body[0].body, to_insert, position-1)
+    return child_body
+
+#====================================================> updated_itrator
+def updated_assignment_mul(index_list,loop_iterate_of_child,levels_info, matching_loops_count, loop_count):
+    ret_index_list = []
+    
+    for i  in range(0, len(index_list)):
+        ind = index_list[i]
+        def recursive_index_update_mul(ind, loop_iterate_of_child, levels_info, matching_loops_count, loop_count):
+            if loop_count == 0:
+                return ind, matching_loops_count
+            
+            ind.dobject, matching_loops_count = recursive_index_update_mul(ind.dobject, loop_iterate_of_child, levels_info, matching_loops_count, loop_count-1)
+            if matching_loops_count > 0:
+                ind.index = loop_iterate_of_child[levels_info.pop(0)]
+                matching_loops_count = matching_loops_count -1
+            return ind, matching_loops_count
+        
+        ind, _ = recursive_index_update_mul(ind, loop_iterate_of_child, levels_info[i], matching_loops_count, loop_count)
+        ret_index_list.append(ind)
+    return ret_index_list
+
+def replace_parent_body(parent, new_body):
+    if not type(parent) == Loop:
+        parent = [new_body]
+        return
+    if type(parent.body[0]) == Loop:
+        return replace_parent_body(parent.body[0], new_body)
+    else:
+        parent.body = [new_body]
+        return
+    
+##################################################################################################################################################
+######################################################### post_order_traversal FUNCTION ##########################################################
+##################################################################################################################################################
 def post_order_traversal(root):
     if type(root) == TensorOp:
         post_order_traversal(root.operators[0])
         post_order_traversal(root.operators[1])
-
-        # =========================================> Right Child Check
-        if (type(root.operators[0]) == TensorOp) and (root.op_type in op_mapping) and (root.operators[0].op_type in op_mapping):
-            parent_op = get_operation(root.compute)
-            child_op = get_operation(root.operators[0].compute)
-            
-            if child_op == '+' or child_op == '-' or child_op == '@' or child_op == '/':
+        #====================================================================================================> Left Child Check
+        if (type(root.operators[0]) == TensorOp):
+            #====================================================================================================> scaler +, -, /, *
+            if ((root.op_type in op_mapping) and (root.operators[0].op_type in op_mapping)):
                 parent_bounds = get_bounds(root.compute[0], [], [], [])
                 child_bounds = get_bounds(root.operators[0].compute[0], [], [], [])
-                #==================================> For equal bounds
+
+                parent_op = get_operation(root.compute)
+                child_op = get_operation(root.operators[0].compute)
+                #======================================================================> For equal bounds
                 if parent_bounds == child_bounds:
-                    print("==============================================> Safe Left [equal bounds] + , -, /")
+                    print("==============================================> Safe Left Fuse [equal bounds] + , -, /")
 
                     # ===> Parent
                     body_parent = FindBody(root.compute[0])
@@ -408,6 +427,7 @@ def post_order_traversal(root):
 
                     # print("Position: ", position,"\n")
                     if position != -1:
+                        #################################################################### Important prints
                         print("====================> Parent")
                         PrintCCode(root.compute)
                         print("====================> Child")
@@ -416,33 +436,90 @@ def post_order_traversal(root):
                         print("====================> After fusion")
                         PrintCCode(root.compute)
                 else:
-                    print("check for N equal")
-        
-        if (type(root.operators[1]) == TensorOp) and (root.op_type in op_mapping) and (root.operators[1].op_type in op_mapping):
-            parent_op = get_operation(root.compute)
-            child_op = get_operation(root.operators[1].compute)
-            
-            if child_op == '+' or child_op == '-' or child_op == '@' or child_op == '/':
+                    print("check for N equal?????????????????????")
+
+            #====================================================================================================> einsum Left
+            if (root.operators[0].op_type == "einsum"  and root.op_type != "einsum"):
+                # print("======> in einsum")
+                parent_bounds = get_bounds(root.compute[0], [], [], [])
+                child_bounds = get_bounds(root.operators[0].compute[0], [], [], [])
+                # print("===> Parent/Child Bounds")
+                # print(parent_bounds)
+                # print(child_bounds, "\n")
+
+                equal_loops = 0
+                for a in range(0, len(parent_bounds[0])):
+                    if (parent_bounds[0][a] == child_bounds[0][a]) and (parent_bounds[1][a] == child_bounds[1][a]) and (parent_bounds[2][a] == child_bounds[2][a]):
+                        equal_loops = equal_loops + 1
+                # print("N equal loop bounds: ",equal_loops,"\n")
+                
+                if equal_loops != 0:
+                    #====================================================> For getting the updated parent body assignment
+                    body_of_child = FindBody(root.operators[0].compute[0])
+                    body_of_parent = FindBody(root.compute[0])
+
+                    temp = to_string(body_of_parent[0])
+                    temp_ops = re.findall(r'[\+\-\*/]', temp)
+
+                    loop_iterate_of_child = get_loop_iterate(root.operators[0].compute[0], [])
+                    loop_iterate_of_parent = get_loop_iterate(root.compute[0], [])
+
+                    index_list_cc = get_body_Indices(body_of_child)
+                    index_list_pp = get_body_Indices(body_of_parent)
+
+
+                    indices_index = get_index_of_all_indices(index_list_pp)
+                    levels_info22 = get_index_loop_level(loop_iterate_of_parent, indices_index)
+
+                    count = count_loops(root.compute[0], 0)
+
+                    updated_index = updated_assignment_mul(index_list_pp[0],loop_iterate_of_child, levels_info22[0], equal_loops, count)
+
+                    new_rhs = updated_index[1]
+                    for i in range(2, len(updated_index)):
+                        new_rhs = Expr(new_rhs, updated_index[i], temp_ops.pop(0))
+
+                    new_assignment = Assignment(updated_index[0], new_rhs)
+
+                    replace_parent_body(root.compute[0], new_assignment)
+                    # ====================================================>
+                    to_insert = root.compute[0]
+                    for b in range(0, equal_loops):
+                        # print(type(to_insert))
+                        if(type(to_insert) == Loop):
+                            to_insert = to_insert.body
+                        else:
+                            to_insert = to_insert[0].body
+
+                    child_body = update_child_body(root.operators[0].compute[0], to_insert,equal_loops)
+                    
+                    root.compute = [child_body]
+                    root.operators[0].compute = []
+                
+        #====================================================================================================> Right Child Check
+        if (type(root.operators[1]) == TensorOp):
+            #====================================================================================================> scaler +, -, /
+            if ((root.op_type in op_mapping) and (root.operators[1].op_type in op_mapping)):
                 parent_bounds = get_bounds(root.compute[0], [], [], [])
                 child_bounds = get_bounds(root.operators[1].compute[0], [], [], [])
-                #==================================> For equal bounds
-                if parent_bounds == child_bounds:
-                    print("==============================================> Safe Right [equal bounds] + , -, /")
 
+                parent_op = get_operation(root.compute)
+                child_op = get_operation(root.operators[1].compute)
+                #================================================================================================> For equal bounds
+                if parent_bounds == child_bounds:
+                    print("==============================================> Safe Right Fuse [equal bounds] + , -, /")
                     # ===> Parent
                     body_parent = FindBody(root.compute[0])
                     index_list_parent = get_body_Indices(body_parent)
                     names_parent = get_name_of_all_indices(index_list_parent)
                     name_list_p = names_parent[0]
                     # PrintCCode(name_list_p)
-
                     # ===> Child
                     body_child = FindBody(root.operators[1].compute[0])
                     index_list_child = get_body_Indices(body_child)
                     names_child = get_name_of_all_indices(index_list_child)
                     name_list_c = names_child[0]
                     # PrintCCode(name_list_c)
-
                     #  ===> Position to repalce IR
                     replace = name_list_c[0]
                     position = -1
@@ -451,9 +528,9 @@ def post_order_traversal(root):
                         if replace == name_list_p[i]:
                             exists = True
                             position = i
-
                     # print("Position: ", position,"\n")
                     if position != -1:
+                        #################################################################### Important prints
                         print("====================> Parent")
                         PrintCCode(root.compute)
                         print("====================> Child")
@@ -462,81 +539,27 @@ def post_order_traversal(root):
                         print("====================> After fusion")
                         PrintCCode(root.compute)
                 else:
-                    print("check for N equal")
+                    print("check for N equal ????????????????????????")
+    
     if type(root) == Tensor:
         return
+    
     return root
-    
-#====================================================================> fuse
+
+##################################################################################################################################################
+############################################################### FUSE FUNCTION ####################################################################
+##################################################################################################################################################
 def fuse(ast_wit_ir):
-    elementwise_op = op_mapping
     node = ast_wit_ir
-
-    # .operators[]                           ====> Left / Right child (TensorOp or Tensor)
-    # [node.operators[0].operators[1].eval]  ====> result 
-    # node.operators[0].operators[1].decl    ====> result declaration
-    # node.operators[0].operators[1].compute ====> loops and body (IR) list
-
-    # print("===============================================================> Helpers Functions Testing")
-    # print("==============================================> Get Loop iterate")
-    # print(to_string(node.compute[0]))
-    # loop_iterate_list = get_loop_iterate(node.compute[0], [])
-    # loop_iterate_list.reverse()
-    # PrintCCode(loop_iterate_list)
-    
-    # print("==============================================> Loop body")
-    # body = FindBody(node.compute[0]) # returns a list with number of instructions i.e arr14[_l6][_l7] = arr10[_l6][_l7] + e[_l6][_l7];
-    # print("Body: ", to_string(body[0]))
-    # print("LHS: ", type(body[0].lhs))
-    # print("RHS: ", type(body[0].rhs))
-
-    # print("==============================================> Get Body Indices obj")
-    # #arr14[_l6][_l7]arr10[_l6][_l7]e[_l6][_l7]
-    # index_list = get_body_Indices(body)
-    # PrintCCode(index_list[0])
-
-    # print("==============================================> Get name of all Indices obj")
-    # names = get_name_of_all_indices(index_list)
-    # PrintCCode(names[0])
-
-    # print("==============================================> Get Indices index")
-    # #[[[_l7,_l6], [_l7,_l6], [_l7,_l6]], [], ....] 
-    # indices_index = get_index_of_all_indices(index_list)
-    # # =========> Just for printing
-    # for i in range(0, len(indices_index)):
-    #     line = indices_index[i]
-    #     for j in range(0,len(line)):
-    #         one_obj = line[j]
-    #         for k in range(0, len(one_obj)):
-    #             print(to_string(one_obj[k]))
-
-    # print("==============================================> Get Indices vs loop level")
-    # levels_info = get_index_loop_level(loop_iterate_list, indices_index)
-    # print(levels_info)
-
-    # print("==============================================> Get operation")
-    # print("Operation:", get_operation(node.compute))
-
-    # print("==============================================> Count number of Loops")
-    # print("Loop count:", count_loops(node.compute[0], 0))
-
-    # print("==============================================> Get Lower/Upper bound of Loops")
-    # print("Loop bounds:", get_bounds(node.compute[0], [], [], []))
-
-    # print("==============================================> move IR without checks")
-    # PrintCCode(node.operators[0].compute)
-    # PrintCCode(node.operators[1].compute)
-    # new_1, new_2 = move_ir_2(node.operators[0], node.operators[1])
-    # print("===> After Moving")
-    # PrintCCode(new_1.compute)
-    # PrintCCode(new_2.compute)
-
-    print("==============================================> Post Order Traversal")
+    print("=========================================> Post Order Traversal")
     node = post_order_traversal(node)
     return node
 
-########################### TEST CASES ###########################
-############################################### Simple [+]
+##################################################################################################################################################
+############################################################### TEST CASES #######################################################################
+##################################################################################################################################################
+
+################################################################################################################################################## Simple [+]
 def test1():
     A = Tensor('a', (30, 30))
     B = Tensor('b', (30, 30))
@@ -555,16 +578,16 @@ def test1():
     print("===============================================================>")
     new_res_with_ir = fuse(res_with_ir)
     
-    print("=============================================================================================>")
+    print("==========================================================================================================>")
     print("===============================================================> Updated IR Complete (test 1)")
     code1 = codegen.cpu.gen_cpp(new_res_with_ir)
     print(code1)
-    print("==============================================================================================>")
+    print("==========================================================================================================>")
     print("===============================================================> Updated IR Loops Only (test 1)")
     PrintCCode(new_res_with_ir.compute)
 
-############################################### Simple [+]
-def test11():
+################################################################################################################################################## Simple [+]
+def test2():
     A = Tensor('a', (30, 30))
     B = Tensor('b', (30, 30))
     C = Tensor('c', (30, 30))
@@ -585,16 +608,142 @@ def test11():
     print("===============================================================>")
     new_res_with_ir = fuse(res_with_ir)
     
-    print("=============================================================================================>")
-    print("===============================================================> Updated IR Complete (test 11)")
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 2)")
     code1 = codegen.cpu.gen_cpp(new_res_with_ir)
     print(code1)
-    print("==============================================================================================>")
-    print("===============================================================> Updated IR Loops Only (test 11)")
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 2)")
     PrintCCode(new_res_with_ir.compute)
 
-############################################### Simple [-]
-def test111():
+################################################################################################################################################## Simple [- and /]
+def test3():
+    A = Tensor('a', (30, 30))
+    B = Tensor('b', (30, 30))
+    C = Tensor('c', (30, 30))
+    D = Tensor('d', (30, 30))
+    E = Tensor('e', (30, 30))
+    F = Tensor('f', (30, 30))
+
+    res1 = A - B
+    res2 = C // D
+    res3 = E - F
+    res0 = res1 + res2
+    res = res0 + res3
+    res_with_ir = gen_ir(res)
+    code0 = codegen.cpu.gen_cpp(res_with_ir)
+    
+    print("===============================================================> res_with_ir [IR]")
+    print(code0)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+    
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 3)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 3)")
+    PrintCCode(new_res_with_ir.compute)
+
+################################################################################################################################################## Not all loops bound are equal Simple [+]
+def test4():
+    A = Tensor('a', (30, 30))
+    B = Tensor('b', (30, 30))
+    C = Tensor('c', (30, 30))
+    D = Tensor('d', (30, 30))
+
+    res1 = A + B
+    res2 = C * D
+
+    res = res1 + res2
+    res_with_ir = gen_ir(res)
+    code0 = codegen.cpu.gen_cpp(res_with_ir)
+    
+    print("===============================================================> res_with_ir [IR]")
+    print(code0)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+    
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 4)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 4)")
+    PrintCCode(new_res_with_ir.compute)
+
+################################################################################################################################################## From Notion
+def test5():
+    A = Tensor('a', (10, 20))
+    B = Tensor('b', (20, 30))
+    C = Tensor('c', (10, 30))
+
+    res1 = A @ B # 20, 40
+    res = res1 + C
+    res_with_ir = gen_ir(res)
+    code = codegen.cpu.gen_cpp(res_with_ir)
+    print("===============================================================> res_with_ir [IR]")
+    print(code)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 5)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 5)")
+    PrintCCode(new_res_with_ir.compute)
+
+##################################################################################################################################################  From Notion Equal Bounds
+def test6():
+    A = Tensor('a', (20, 20))
+    B = Tensor('b', (20, 20))
+    C = Tensor('c', (20, 20))
+
+    res1 = A @ B # 20, 40
+    res = res1 + C
+    res_with_ir = gen_ir(res)
+    code = codegen.cpu.gen_cpp(res_with_ir)
+    print("===============================================================> res_with_ir [IR]")
+    print(code)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 6)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 6)")
+    PrintCCode(new_res_with_ir.compute)
+
+################################################################################################################################################## Simple [*]
+def test7():
+    A = Tensor('a', (20, 20))
+    B = Tensor('b', (20, 20))
+    C = Tensor('c', (20, 20))
+
+    res1 = A * B # 20, 40
+    res = res1 + C
+    res_with_ir = gen_ir(res)
+    code = codegen.cpu.gen_cpp(res_with_ir)
+    print("===============================================================> res_with_ir [IR]")
+    print(code)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 7)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 7)")
+    PrintCCode(new_res_with_ir.compute)
+
+################################################################################################################################################## Simple [-]
+def test8():
     A = Tensor('a', (30, 30))
     B = Tensor('b', (30, 30))
     C = Tensor('c', (30, 30))
@@ -615,65 +764,238 @@ def test111():
     print("===============================================================>")
     new_res_with_ir = fuse(res_with_ir)
     
-    print("=============================================================================================>")
-    print("===============================================================> Updated IR Complete (test 111)")
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 8)")
     code1 = codegen.cpu.gen_cpp(new_res_with_ir)
     print(code1)
-    print("==============================================================================================>")
-    print("===============================================================> Updated IR Loops Only (test 111)")
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 8)")
     PrintCCode(new_res_with_ir.compute)
 
-##################################################################################################################################################
-def test2():
+################################################################################################################################################## Simple [/]
+def test9():
     A = Tensor('a', (30, 30))
     B = Tensor('b', (30, 30))
     C = Tensor('c', (30, 30))
     D = Tensor('d', (30, 30))
+    E = Tensor('e', (30, 30))
+    F = Tensor('f', (30, 30))
+
+    res1 = A // B
+    res2 = C // D
+    res3 = E // F
+    res0 = res1 + res2
+    res = res0 + res3
+    res_with_ir = gen_ir(res)
+    code0 = codegen.cpu.gen_cpp(res_with_ir)
+    
+    print("===============================================================> res_with_ir [IR]")
+    print(code0)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+    
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 9)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 9)")
+    PrintCCode(new_res_with_ir.compute)
+
+################################################################################################################################################## Simple [*]
+def test10():
+    A = Tensor('a', (30, 30))
+    B = Tensor('b', (30, 30))
+    C = Tensor('c', (30, 30))
+    D = Tensor('d', (30, 30))
+    E = Tensor('e', (30, 30))
+    F = Tensor('f', (30, 30))
+
+    res1 = A * B
+    res2 = C * D
+    res3 = E * F
+    res0 = res1 + res2
+    res = res0 + res3
+    res_with_ir = gen_ir(res)
+    code0 = codegen.cpu.gen_cpp(res_with_ir)
+    
+    print("===============================================================> res_with_ir [IR]")
+    print(code0)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+    
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 10)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 10)")
+    PrintCCode(new_res_with_ir.compute)
+
+################################################################################################################################################## Scalar Operation
+def test11():
+    A = Tensor('a', (30, 30))
+    scalar = 5
+
+    res = A + scalar
+    res_with_ir = gen_ir(res)
+    code = codegen.cpu.gen_cpp(res_with_ir)
+
+    print("===============================================================> res_with_ir [IR]")
+    print(code)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 11)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 11)")
+    PrintCCode(new_res_with_ir.compute)
+
+################################################################################################################################################## Broadcasting Case
+def test12():
+    A = Tensor('a', (30, 1))
+    B = Tensor('b', (1, 30))
+
+    res = A + B
+    res_with_ir = gen_ir(res)
+    code = codegen.cpu.gen_cpp(res_with_ir)
+
+    print("===============================================================> res_with_ir [IR]")
+    print(code)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 12)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 12)")
+    PrintCCode(new_res_with_ir.compute)
+
+################################################################################################################################################## Reduction Operation
+def test13():
+    A = Tensor('a', (30, 30))
+
+    res = A.sum(axis=0)
+    res_with_ir = gen_ir(res)
+    code = codegen.cpu.gen_cpp(res_with_ir)
+
+    print("===============================================================> res_with_ir [IR]")
+    print(code)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 13)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 13)")
+    PrintCCode(new_res_with_ir.compute)
+
+##################################################################################################################################################
+def test14():
+    A = Tensor('a', (20, 30))
+    B = Tensor('b', (30, 40))
+    C = Tensor('c', (20, 40))
+    D = Tensor('d', (40, 40))
+
+    res1 = A + B # 20, 40
+    res2 = C + D # 20, 40
+    res = res1 + res2
+    res_with_ir = gen_ir(res)
+    code = codegen.cpu.gen_cpp(res_with_ir)
+    print("===============================================================> res_with_ir [IR]")
+    print(code)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 14)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 14)")
+    PrintCCode(new_res_with_ir.compute)
+
+##################################################################################################################################################
+def test15():
+    A = Tensor('a', (20, 30))
+    B = Tensor('b', (30, 40))
+    C = Tensor('c', (20, 40))
+    D = Tensor('d', (40, 40))
+
+    res1 = A // B # 20, 40
+    res2 = C + D # 20, 40
+    res = res1 + res2
+    res_with_ir = gen_ir(res)
+    code = codegen.cpu.gen_cpp(res_with_ir)
+    print("===============================================================> res_with_ir [IR]")
+    print(code)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 15)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 15)")
+    PrintCCode(new_res_with_ir.compute)
+
+##################################################################################################################################################
+def test16():
+    A = Tensor('a', (20, 30))
+    B = Tensor('b', (30, 40))
+    C = Tensor('c', (20, 40))
+    D = Tensor('d', (40, 40))
+
+    res1 = A // B # 20, 40
+    res2 = C * D # 20, 40
+    res = res1 + res2
+    res_with_ir = gen_ir(res)
+    code = codegen.cpu.gen_cpp(res_with_ir)
+    print("===============================================================> res_with_ir [IR]")
+    print(code)
+    print("===============================================================>")
+    new_res_with_ir = fuse(res_with_ir)
+
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 16)")
+    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
+    print(code1)
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 16)")
+    PrintCCode(new_res_with_ir.compute)
+
+##################################################################################################################################################
+def test17():
+    A = Tensor('a', (20, 30))
+    B = Tensor('b', (30, 40))
+    C = Tensor('c', (20, 40))
+    D = Tensor('d', (40, 40))
 
     res1 = A @ B # 20, 40
     res2 = C @ D # 20, 40
     res = res1 + res2
     res_with_ir = gen_ir(res)
-    code0 = codegen.cpu.gen_cpp(res_with_ir)
-    
+    code = codegen.cpu.gen_cpp(res_with_ir)
     print("===============================================================> res_with_ir [IR]")
-    print(code0)
+    print(code)
     print("===============================================================>")
     new_res_with_ir = fuse(res_with_ir)
-    
-    print("=============================================================================================>")
-    print("===============================================================> Updated IR Complete (test 2)")
+
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Complete (test 17)")
     code1 = codegen.cpu.gen_cpp(new_res_with_ir)
     print(code1)
-    print("==============================================================================================>")
-    print("===============================================================> Updated IR Loops Only (test 2)")
-    PrintCCode(new_res_with_ir.compute)
-
-############################################### Simple [*]
-def test22():
-    A = Tensor('a', (30, 30))
-    B = Tensor('b', (30, 30))
-    C = Tensor('c', (30, 30))
-    D = Tensor('d', (30, 30))
-
-    res1 = A @ B
-    res2 = C + D
-    res = res1 + res2
-    res_with_ir = gen_ir(res)
-    code0 = codegen.cpu.gen_cpp(res_with_ir)
-    
-    print("===============================================================> res_with_ir [IR]")
-    print(code0)
-    print("===============================================================>")
-    new_res_with_ir = fuse(res_with_ir)
-    
-    print("=============================================================================================>")
-    print("===============================================================> Updated IR Complete (test 22)")
-    code1 = codegen.cpu.gen_cpp(new_res_with_ir)
-    print(code1)
-    print("==============================================================================================>")
-    print("===============================================================> Updated IR Loops Only (test 22)")
+    print("==========================================================================================================>")
+    print("===============================================================> Updated IR Loops Only (test 17)")
     PrintCCode(new_res_with_ir.compute)
 
 if __name__ == "__main__":
-    test11()
+    test15()
